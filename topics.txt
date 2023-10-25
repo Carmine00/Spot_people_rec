@@ -1,0 +1,5 @@
+/spot/camera/back/image
+/spot/camera/frontleft/image
+/spot/camera/frontright/image
+/spot/camera/left/image
+/spot/camera/right/image
