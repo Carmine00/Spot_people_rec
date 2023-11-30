@@ -7,7 +7,7 @@ Versions later than Yolov4 are not suitable for OpenCV, so Yolov3-tiny has been 
 Clone this repo to your workspace and rename the package name to "spot_human_detetction". 
 
 To use this package correctly, it is necessary to check if you have the following dependencies:
-- OpenCV
+- OpenCV v4.2 or higher
 - cv_bridge
 
 Inside this repository you can already find the config files for Yolov3, Yolov3-tiny and a training test for YoloV3-tiny is called yolo yolo-tiny-tabi.
