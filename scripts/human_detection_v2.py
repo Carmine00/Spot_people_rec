@@ -13,11 +13,12 @@ import copy
 import numpy as np
 from threading import Thread
 if sys.version_info[0] == 2:
-    import Queue as queue
+	import Queue as queue
 else:
-    import queue
+	import queue
 
 class QueueFPS(queue.Queue):
+
 	def __init__(self):
 		queue.Queue.__init__(self)
 		self.startTime = 0
@@ -29,11 +30,10 @@ class QueueFPS(queue.Queue):
 		if self.counter == 1:
 			self.startTime = time.time()
 
-#Class for detecting an human by using Yolov3-tiny cfg
 class HumanDetetcion:
-	
+
 	def __init__(self):
-		
+
 		#Attributes
 		self.bridge = CvBridge()
 
@@ -54,12 +54,10 @@ class HumanDetetcion:
 		self.predictionsQueue = QueueFPS()
 		#Queue for frames porcessed
 		self.processedFramesQueue = queue.Queue()
-		
-		#Camera image subscriber to the left side
-		self.image_sub = rospy.Subscriber("/spot/camera/back/image", Image, self.image_callback)
-		#self.camera_param_sub = rospy.Subscriber("/spot/camera/back/camera_info", CameraInfo, self.camera_info_callback)
 
-        #Set the absolute path of the 
+		self.image_sub = rospy.Subscriber("/spot/camera/back/image", Image, self.image_callback)
+
+		#Set the absolute path of the 
 		rospack = rospkg.RosPack() 
 		
 		self.rate = rospy.Rate(100)
@@ -72,10 +70,10 @@ class HumanDetetcion:
 		config_svg_path = pkg_path + '/yolo/yolo-tiny-tabi.cfg'   
 		weights_path = pkg_path + '/yolo/yolo-tiny-tabi.weights'
 		names_path = pkg_path + "/yolo/tabi.names"
-        
-        #Load the neural network from Darknet
+
+		#Load the neural network from Darknet
 		self.net = cv.dnn.readNet(config_svg_path, weights_path, 'darknet')
-		
+
 		self.net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
 		self.net.setPreferableTarget(cv.dnn.DNN_TARGET_CPU)
 		
@@ -83,40 +81,27 @@ class HumanDetetcion:
 		self.lastLayerId = self.net.getLayerId(self.layerNames[-1])
 		self.lastLayer = self.net.getLayer(self.lastLayerId)
 		self.outNames = self.net.getUnconnectedOutLayersNames()
-		
-        # Load names of classes and get random colors
+
+		# Load names of classes and get random colors
 		self.classes = open(names_path).read().strip().split('\n')
 		
 		# determine the output layer
 		self.ln = self.net.getLayerNames()
 		self.ln = [self.ln[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
-		
+
 		self.processTimer = rospy.Timer(rospy.Duration(0.0035), self.processingThread)
 		self.postProcessTimer = rospy.Timer(rospy.Duration(0.001), self.postProcessThread)
 
-		#cv.namedWindow('Camera')
-		cv.namedWindow('Human Detection')
-		
 		print("Ready...")
 
-
-	def camera_info_callback(self, data):
-
-		self.K_camera = data.K
-		self.P_camera = data.P
-
-		self.camera_param_sub.shutdown()
-
-	#Callback function of camera image subscription	
-	def image_callback(self, data):		
-		#try to get the image by the format cv::Mat()
+	def image_callback(self,data):
 		try:
-			cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")			
-			#When a new frame comes is stored in the queue
-			self.framesQueue.put(cv_image)	
+			cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
 		except CvBridgeError as e:
 			print(e)
-
+		
+		self.framesQueue.put(cv_image)
+	
 	"""
 		Thread body for process frames
 	"""
@@ -162,8 +147,8 @@ class HumanDetetcion:
 				del futureOutputs[0]	
 
 			delta_t = (time.time() - prev_time)
-			print("time for prediction: ", delta_t)		
-	
+			print("time for prediction: ", delta_t)
+
 	"""
 		Thread for postprocess the predictions
 	"""
@@ -177,14 +162,15 @@ class HumanDetetcion:
 
 		#while(self.process):
 
-		classIds.clear()
-		confidences.clear()
-		boxes.clear()
+		#classIds.clear()
+		#confidences.clear()
+		#boxes.clear()
 
 		# Retrive predictions and relative frame
 		try:
 			outs = self.predictionsQueue.get_nowait()
 			frame = self.processedFramesQueue.get_nowait()
+
 		except queue.Empty:
 			pass
 
@@ -206,7 +192,7 @@ class HumanDetetcion:
 					confidence = scores[classId]					
 					if confidence > self.confidence_treshold:
 						center_x = int(detection[0] * box_scale_w)
-						center_y = int(detection[1] * box_scale_h)
+						center_y = int(detection[1] * box_scale_h)						
 						width = int(detection[2] * box_scale_w)
 						height = int(detection[3] * box_scale_h)
 						left = int(center_x - width / 2)
@@ -225,19 +211,19 @@ class HumanDetetcion:
 					cv.rectangle(frame, (x, y), (x + w, y + h), color, 2)
 					text = "{}: {:.4f}".format(self.classes[classIds[i]], confidences[i])
 					cv.putText(frame, text, (x, y - 5), cv.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-		
-			cv.imshow('Human Detection',frame)			
-			cv.waitKey(1)
+					
+				cv.imshow("Human Detection", frame)
+				cv.waitKey(1)
 
 def main(args):
 	rospy.init_node('human_detection', anonymous=True)
 
 	hd_ = HumanDetetcion()
 
-	processFramesThread = Thread(target=hd_.processingThread)
+	#processFramesThread = Thread(target=hd_.processingThread)
 	#processFramesThread.start()
 
-	postProcessFramesThread = Thread(target=hd_.postProcessThread)
+	#postProcessFramesThread = Thread(target=hd_.postProcessThread)
 	#postProcessFramesThread.start()
 	
 	try:
@@ -251,4 +237,3 @@ def main(args):
 
 if __name__ == '__main__':
     main(sys.argv)
-		
